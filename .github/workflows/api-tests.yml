@@ -44,23 +44,20 @@ jobs:
           path: target/allure-results
           retention-days: 14
 
-      # Publish the report only from main, so pull requests don't overwrite the live report.
-      - name: Load report history
+      # The report is published from main only, so pull requests never overwrite the live report.
+      - name: Load previous report (for trend history)
         if: always() && github.ref == 'refs/heads/main'
         uses: actions/checkout@v4
-        continue-on-error: true
+        continue-on-error: true   # gh-pages does not exist before the first publish
         with:
           ref: gh-pages
           path: gh-pages
 
-      - name: Build Allure report
+      - name: Build Allure report with history
         if: always() && github.ref == 'refs/heads/main'
-        uses: simple-elf/allure-report-action@v1.9
-        with:
-          gh_pages: gh-pages
-          allure_results: target/allure-results
-          allure_history: allure-history
-          keep_reports: 20
+        run: |
+          if [ -d gh-pages/history ]; then cp -r gh-pages/history target/allure-results/history; fi
+          npx --yes allure-commandline@2.29.0 generate target/allure-results -o allure-report --clean
 
       - name: Publish to GitHub Pages
         if: always() && github.ref == 'refs/heads/main'
@@ -68,4 +65,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: allure-history
+          publish_dir: allure-report
